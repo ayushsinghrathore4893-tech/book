@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sensory Free Fiber — Magazine</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Space+Mono:wght@400;700&display=swap');
+
+  :root {
+    --bg: #1a0f2e;
+    --bg2: #0d0820;
+    --accent: #c9a96e;
+    --accent2: #e8c9a0;
+    --white: #f5f0e8;
+    --purple: #5b2d8e;
+    --purple2: #7c3fbf;
+    --glow: rgba(201,169,110,0.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg2);
+    font-family: 'Cormorant Garamond', serif;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+    cursor: none;
+  }
+
+  /* Custom cursor */
+  #cursor {
+    position: fixed;
+    width: 12px;
+    height: 12px;
+    background: var(--accent);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    transition: transform 0.1s ease;
+    mix-blend-mode: difference;
+  }
+  #cursor-ring {
+    position: fixed;
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--accent);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9998;
+    transition: transform 0.15s ease, left 0.08s ease, top 0.08s ease;
+    transform: translate(-50%, -50%);
+    opacity: 0.6;
+  }
+
+  /* Canvas for particles */
+  #particles-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Scene */
+  #scene {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+  }
+
+  /* Atmospheric background */
+  .bg-atmosphere {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 30% 40%, #2d1060 0%, transparent 60%),
+                radial-gradient(ellipse 60% 50% at 70% 60%, #1a0835 0%, transparent 50%),
+                linear-gradient(165deg, #0d0820 0%, #1a0f2e 40%, #0f1a2e 100%);
+    z-index: 0;
+  }
+
+  /* Noise overlay */
+  .bg-atmosphere::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0.04;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    background-size: 200px;
+  }
+
+  /* Floating title */
+  .title-left {
+    position: fixed;
+    left: -10px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
+    pointer-events: none;
+  }
+  .title-left span {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(60px, 9vw, 130px);
+    font-weight: 900;
+    color: var(--white);
+    opacity: 0.08;
+    line-height: 1;
+    display: block;
+    letter-spacing: -2px;
+  }
+
+  .title-right {
+    position: fixed;
+    right: -10px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
+    text-align: right;
+    pointer-events: none;
+  }
+  .title-right span {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(60px, 9vw, 130px);
+    font-style: italic;
+    font-weight: 400;
+    color: var(--accent);
+    opacity: 0.12;
+    line-height: 1;
+    display: block;
+  }
+
+  /* Issue label */
+  .issue-label {
+    position: fixed;
+    top: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    text-align: center;
+  }
+  .issue-label .vol {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 4px;
+    color: var(--accent);
+    text-transform: uppercase;
+    opacity: 0.8;
+  }
+  .issue-label .name {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--white);
+    letter-spacing: 2px;
+    margin-top: 4px;
+  }
+
+  /* Book container */
+  #book-wrap {
+    position: relative;
+    z-index: 5;
+    perspective: 1800px;
+  }
+
+  #book {
+    position: relative;
+    width: min(640px, 88vw);
+    height: min(440px, 64vw);
+    transform-style: preserve-3d;
+    transform: rotateX(10deg) rotateY(-8deg) rotateZ(1deg);
+    transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    filter: drop-shadow(0 60px 80px rgba(0,0,0,0.8)) drop-shadow(0 0 40px rgba(91,45,142,0.3));
+  }
+
+  #book:hover {
+    transform: rotateX(5deg) rotateY(-4deg) rotateZ(0.5deg) translateY(-10px);
+  }
+
+  /* Page base */
+  .page {
+    position: absolute;
+    width: 50%;
+    height: 100%;
+    top: 0;
+    transform-style: preserve-3d;
+    transform-origin: left center;
+    border-radius: 0 4px 4px 0;
+    overflow: hidden;
+  }
+
+  .page-left {
+    left: 0;
+    border-radius: 4px 0 0 4px;
+    transform-origin: right center;
+  }
+
+  .page-face {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    overflow: hidden;
+    border-radius: inherit;
+  }
+
+  /* Page content */
+  .page-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .page-content {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 28px 22px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Spine */
+  .spine {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 6px;
+    height: 100%;
+    transform: translateX(-50%);
+    background: linear-gradient(90deg, #0a0515, #2d1060, #1a0835, #0a0515);
+    z-index: 6;
+    box-shadow: -4px 0 20px rgba(0,0,0,0.6), 4px 0 20px rgba(0,0,0,0.6);
+  }
+
+  /* Page curl effect (right bottom corner) */
+  .page-curl {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 0 0 40px 40px;
+    border-color: transparent transparent rgba(0,0,0,0.25) transparent;
+    pointer-events: none;
+    z-index: 10;
+    transition: border-width 0.3s ease;
+  }
+
+  /* Page shadow */
+  .page-shadow {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(0,0,0,0.4) 0%, transparent 30%);
+    pointer-events: none;
+    z-index: 5;
+  }
+  .page-shadow-right {
+    background: linear-gradient(270deg, rgba(0,0,0,0.4) 0%, transparent 30%);
+  }
+
+  /* Navigation bottom */
+  #nav {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    background: rgba(13, 8, 32, 0.7);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(201,169,110,0.15);
+    padding: 10px 18px;
+    border-radius: 50px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+
+  .nav-btn {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    color: rgba(245,240,232,0.5);
+    background: transparent;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 24px;
+    cursor: none;
+    transition: all 0.25s ease;
+    white-space: nowrap;
+  }
+  .nav-btn:hover {
+    color: var(--accent);
+    background: rgba(201,169,110,0.1);
+  }
+  .nav-btn.active {
+    color: var(--bg2);
+    background: var(--accent);
+    font-weight: 700;
+  }
+
+  /* Arrow buttons */
+  .arrow-btn {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 20;
+    background: rgba(13,8,32,0.6);
+    border: 1px solid rgba(201,169,110,0.2);
+    color: var(--accent);
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    cursor: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+  }
+  .arrow-btn:hover {
+    background: rgba(201,169,110,0.15);
+    border-color: var(--accent);
+    transform: translateY(-50%) scale(1.1);
+  }
+  #btn-prev { left: 20px; }
+  #btn-next { right: 20px; }
+
+  /* Page turn animation */
+  @keyframes flip-forward {
+    0% { transform: rotateY(0deg); }
+    100% { transform: rotateY(-180deg); }
+  }
+  @keyframes flip-backward {
+    0% { transform: rotateY(-180deg); }
+    100% { transform: rotateY(0deg); }
+  }
+
+  .flipping-forward { animation: flip-forward 0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+  .flipping-backward { animation: flip-backward 0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+
+  /* Page indicator */
+  .page-num {
+    position: fixed;
+    top: 32px;
+    right: 32px;
+    z-index: 10;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    opacity: 0.7;
+  }
+
+  /* Ambient glow behind book */
+  .book-glow {
+    position: absolute;
+    width: 120%;
+    height: 120%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(ellipse 60% 50% at 50% 50%, rgba(124,63,191,0.2) 0%, transparent 70%);
+    filter: blur(40px);
+    pointer-events: none;
+    z-index: 0;
+    border-radius: 50%;
+  }
+
+  /* Page turn dust particles (JS driven) */
+  .dust-particle {
+    position: fixed;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 50;
+    opacity: 0;
+  }
+
+  /* Scroll hint */
+  .hint {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 8;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 12px;
+    letter-spacing: 3px;
+    color: rgba(201,169,110,0.4);
+    text-transform: uppercase;
+    animation: fadeHint 3s ease 2s forwards;
+    opacity: 0;
+  }
+  @keyframes fadeHint {
+    0% { opacity: 0; transform: translateX(-50%) translateY(5px); }
+    30% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    70% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  /* Loading screen */
+  #loader {
+    position: fixed;
+    inset: 0;
+    background: var(--bg2);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.8s ease;
+  }
+  .loader-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 42px;
+    font-weight: 900;
+    color: var(--white);
+    letter-spacing: 4px;
+    margin-bottom: 8px;
+  }
+  .loader-sub {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 6px;
+    color: var(--accent);
+    opacity: 0.7;
+    text-transform: uppercase;
+    margin-bottom: 40px;
+  }
+  .loader-bar-wrap {
+    width: 200px;
+    height: 1px;
+    background: rgba(201,169,110,0.2);
+    position: relative;
+    overflow: hidden;
+  }
+  .loader-bar {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 1.5s ease;
+    box-shadow: 0 0 10px var(--accent);
+  }
+
+  /* Intro animation */
+  @keyframes bookEntrance {
+    0% { opacity: 0; transform: rotateX(30deg) rotateY(-30deg) rotateZ(5deg) translateY(60px) scale(0.8); }
+    100% { opacity: 1; transform: rotateX(10deg) rotateY(-8deg) rotateZ(1deg) translateY(0) scale(1); }
+  }
+  .book-animate-in {
+    animation: bookEntrance 1.2s cubic-bezier(0.34, 1.3, 0.64, 1) forwards;
+  }
+</style>
+</head>
+<body>
+
+<!-- Loader -->
+<div id="loader">
+  <div class="loader-title">SENSORY</div>
+  <div class="loader-sub">Free Fiber Magazine</div>
+  <div class="loader-bar-wrap"><div class="loader-bar" id="loader-bar"></div></div>
+</div>
+
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+
+<canvas id="particles-canvas"></canvas>
+<div class="bg-atmosphere"></div>
+
+<div class="title-left"><span>Sensory</span></div>
+<div class="title-right"><span>Free Fiber</span></div>
+
+<div class="issue-label">
+  <div class="vol">Vol. 12 — Issue 04 — 2024</div>
+  <div class="name">SENSORY FREE FIBER</div>
+</div>
+
+<div class="page-num" id="page-num">01 / 10</div>
+
+<div id="scene">
+  <div style="position:relative;">
+    <div class="book-glow"></div>
+    <div id="book-wrap">
+      <div id="book">
+        <!-- SPINE -->
+        <div class="spine"></div>
+
+        <!-- Left page -->
+        <div id="left-page" class="page page-left">
+          <div class="page-face" id="left-face">
+            <!-- Content injected by JS -->
+          </div>
+          <div class="page-shadow"></div>
+        </div>
+
+        <!-- Right page (flipping) -->
+        <div id="right-page" class="page" style="left:50%;">
+          <div class="page-face" id="right-face">
+            <!-- Content injected by JS -->
+          </div>
+          <div class="page-shadow page-shadow-right"></div>
+          <div class="page-curl"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="hint">Scroll or click arrows to turn pages</div>
+
+<!-- Arrow buttons -->
+<button class="arrow-btn" id="btn-prev">&#8592;</button>
+<button class="arrow-btn" id="btn-next">&#8594;</button>
+
+<!-- Navigation -->
+<div id="nav"></div>
+
+<script>
+// ─── Page Data ───────────────────────────────────────────────────────────────
+const pages = [
+  {
+    id: 'cover',
+    label: 'COVER',
+    left: {
+      type: 'solid',
+      bg: 'linear-gradient(135deg, #0d0820 0%, #2d1060 100%)',
+      content: `
+        <div style="width:100%;height:100%;display:flex;flex-direction:column;justify-content:flex-end;padding:30px 24px;background:linear-gradient(135deg,#0d0820,#1a0835);">
+          <div style="font-family:'Space Mono',monospace;font-size:8px;letter-spacing:4px;color:#c9a96e;opacity:0.7;margin-bottom:12px;">EST. 2018</div>
+          <div style="font-family:'Playfair Display',serif;font-size:36px;font-weight:900;color:#f5f0e8;line-height:1;letter-spacing:-1px;">SENSORY</div>
+          <div style="width:40px;height:1px;background:#c9a96e;margin:12px 0;"></div>
+          <div style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:13px;color:rgba(245,240,232,0.6);line-height:1.5;">The art of natural living<br>through sustainable fiber</div>
+        </div>`,
+    },
+    right: {
+      type: 'image',
+      gradient: 'linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.5) 100%)',
+      imageStyle: 'background: linear-gradient(160deg, #3d1f7a, #7c3fbf, #c9a96e, #2d1060);',
+      content: `
+        <div style="width:100%;height:100%;background:linear-gradient(160deg,#3d1f7a 0%,#7c3fbf 40%,#c9a96e 70%,#2d1060 100%);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:16px;">
+          <div style="width:80px;height:80px;border:1px solid rgba(201,169,110,0.5);border-radius:50%;display:flex;align-items:center;justify-content:center;">
+            <div style="font-size:32px;">🌿</div>
+          </div>
+          <div style="font-family:'Playfair Display',serif;font-style:italic;font-size:18px;color:rgba(245,240,232,0.9);text-align:center;padding:0 20px;">Free Fiber</div>
+          <div style="font-family:'Space Mono',monospace;font-size:8px;letter-spacing:3px;color:rgba(201,169,110,0.6);">VOL. XII · 2024</div>
+        </div>`
+    }
+  },
+  {
+    id: 'page1',
+    label: 'PAGE 1',
+    left: {
+      type: 'article',
+      content: `
+        <div style="width:100%;height:100%;background:linear-gradient(160deg,#0f1a2e,#1a0f2e);padding:28px 22px;display:flex;flex-direction:column;gap:16px;">
+          <div style="font-family:'Space Mono',monospace;font-size:7px;letter-spacing:4px;color:#c9a96e;opacity:0.8;border-bottom:1px solid rgba(201,169,110,0.2);padding-bottom:10px;">EDITORIAL</div>
+          <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#f5f0e8;line-height:1.2;">From the Editor's Desk</div>
+          <div style="width:30px;height:2px;background:#c9a96e;"></div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:13px;color:rgba(245,240,232,0.65);line-height:1.8;flex:1;">
+            <p>In an age of synthetic abundance, we find ourselves returning to the root — to the whisper of linen against skin, to the weight of honest wool.</p>
+            <br>
+            <p>This issue explores the tension between industrial speed and artisanal patience. Each fiber tells a story of earth, hand, and intention.</p>
+            <br>
+            <p><em style="color:#c9a96e;">Welcome to the slowdown.</em></p>
+          </div>
+          <div style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:11px;color:rgba(201,169,110,0.5);">— The Editors, Spring 2024</div>
+        </div>`
+    },
+    right: {
+      type: 'image',
+      content: `
+        <div style="width:100%;height:100%;position:relative;overflow:hidden;">
+          <div style="position:absolute;inset:0;background:linear-gradient(135deg,#1a3a2e 0%,#2d5a3d 30%,#4a7c55 60%,#c9a96e 100%);"></div>
+          <div style="position:absolute;inset:0;background:radial-gradient(ellipse 80% 80% at 60% 40%,rgba(100,180,100,0.3),transparent);"></div>
+          <div style="position:absolute;bottom:20px;left:20px;right:20px;">
+            <div style="font-family:'Playfair Display',serif;font-style:italic;font-size:16px;color:rgba(245,240,232,0.9);">The Linen Fields</div>
+            <div style="font-family:'Space Mono',monospace;font-size:7px;letter-spacing:2px;color:rgba(201,169,110,0.6);margin-top:4px;">BRITTANY, FRANCE · 2024</div>
+          </div>
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:48px;opacity:0.3;">🌾</div>
+        </div>`
+    }
+  },
+  {
+    id: 'page2',
+    label: 'PAGE 2',
+    left: {
+      type: 'image',
+      content: `
+        <div style="width:100%;height:100%;position:relative;background:linear-gradient(170deg,#1a2e1a,#2d5040,#4a8060);">
+          <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 40% 60%,rgba(74,128,80,0.4),transparent 70%)"></div>
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:80px;opacity:0.15;">🌳</div>
+          <div style="position:absolute;bottom:24px;left:20px;right:20px;">
+            <div style="font-family:'Cormorant Garamond',serif;font-size:12px;font-style:italic;color:rgba(245,240,232,0.7);">Japanese Garden, Kyoto</div>
+          </div>
+        </div>`
+    },
+    right: {
+      type: 'image',
+      content: `
+        <div style="width:100%;height:100%;position:relative;background:linear-gradient(160deg,#1a2e1a,#4a6030,#c9a96e);">
+          <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 60% 40%,rgba(201,169,110,0.3),transparent 70%)"></div>
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:80px;opacity:0.2;">🌸</div>
+          <div style="position:absolute;top:24px;right:20px;text-align:right;">
+            <div style="font-family:'Space Mono',monospace;font-size:7px;letter-spacing:3px;color:rgba(201,169,110,0.7);">CAMELLIA · SERIES</div>
+          </div>
+        </div>`
+    }
+  },
+  {
+    id: 'page3',
+    label: 'PAGE 3',
+    left: {
+      type: 'article',
+      content: `
+        <div style="width:100%;height:100%;background:#f5f0e8;padding:28px 22px;display:flex;flex-direction:column;gap:12px;">
+          <div style="font-family:'Space Mono',monospace;font-size:7px;letter-spacing:4px;color:#5b2d8e;border-bottom:1px solid rgba(91,45,142,0.2);padding-bottom:8px;">FEATURE STORY</div>
+          <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:900;color:#1a0f2e;line-height:1.2;">The Cashmere<br>Renaissance</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:12px;color:#5b2d8e;">How Mongolia's herders are reclaiming the slow tradition</div>
+          <div style="width:100%;height:1px;background:rgba(91,45,142,0.15);margin:4px 0;"></div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:12px;color:rgba(26,15,46,0.7);line-height:1.8;flex:1;">
+            <p>At 1,500 meters above sea level, Davaasuren combs her goats with the practiced patience of a woman who has done this since she was seven.</p>
+            <br>
+            <p>Each handful of raw cashmere is a season compressed — the brutal Mongolian winter that forced the animals to grow fiber so fine it defies description.</p>
+          </div>
+          <div style="display:flex;gap:16px;margin-top:auto;">
+            <div style="text-align:center;">
+              <div style="font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:#5b2d8e;">18µm</div>
+              <div style="font-family:'Space Mono',monospace;font-size:7px;letter-spacing:2px;color:rgba(26,15,46,0.4);">MICRONS</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:#c9a96e;">3°C</div>
+              <div style="font-family:'Space Mono',monospace;font-size:7px;letter-spacing:2px;color:rgba(26,15,46,0.4);">COMFORT TO</div>
+            </div>
+          </div>
+        </div>`
+    },
+    right: {
+      type: 'image',
+      content: `
+        <div style="width:100%;height:100%;position:relative;background:linear-gradient(150deg,#c9a96e,#8b6914,#2d1a00);">
+          <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 30%,rgba(201,169,110,0.5),transparent 70%)"></div>
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:90px;opacity:0.15;">🐑</div>
+          <div style="position:absolute;bottom:24px;left:20px;right:20px;">
+            <div style="font-family:'Playfair Display',serif;font-size:14px;font-style:italic;color:rgba(245,240,232,0.9);">Gobi Desert Herders</div>
+            <div style="font-family:'Space Mono',monospace;font-size:7px;letter-spacing:2px;color:rgba(245,240,232,0.4);margin-top:4px;">MONGOLIA · SPRING HARVEST</div>
+          </div>
+        </div>`
+    }
+  },
+  {
+    id: 'page4',
+    label: 'PAGE 4',
+    left: {
+      type: 'image',
+      content: `
+        <div style="width:100%;height:100%;background:linear-gradient(170deg,#0d1a2e,#1a2e4a,#2e4a6e);display:flex;flex-direction:column;justify-content:center;align-items:center;padding:28px 22px;">
+          <div style="font-family:'Space Mono',monospace;font-size:7px;letter-spacing:4px;color:#c9a96e;opacity:0.8;margin-bottom:24px;text-align:center;">PROCESS DIAGRAM</div>
+          <div style="display:flex;flex-direction:column;gap:12px;width:100%;">
+            ${['Raw Shearing','Washing & Sorting','Carding & Combing','Spinning','Dyeing','Weaving'].map((s,i)=>`
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="width:24px;height:24px;border:1px solid rgba(201,169,110,0.4);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:8px;color:#c9a96e;flex-shrink:0;">${i+1}</div>
+              <div style="flex:1;height:1px;background:rgba(201,169,110,${0.1+i*0.08});"></div>
+              <div style="font-family:'Cormorant Garamond',serif;font-size:12px;color:rgba(245,240,232,${0.4+i*0.1});">${s}</div>
+            </div>`).join('')}
+          </div>
+        </div>`
+    },
+    right: {
+      type: 'article',
+      content: `
+        <div style="width:100%;height:100%;background:#f5f0e8;padding:28px 22px;display:flex;flex-direction:column;gap:12px;">
+          <div style="font-family:'Space Mono',monospace;font-size:7px;letter-spacing:4px;color:#c9a96e;border-bottom:1px solid rgba(201,169,110,0.2);padding-bottom:8px;">CRAFT & PROCESS</div>
+          <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:#1a0f2e;line-height:1.3;">From fleece<br>to fabric</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:12px;color:rgba(26,15,46,0.65);line-height:1.9;flex:1;">
+            <p>Natural fiber production is a meditation on transformation. Each stage strips away impurity, reveals quality, and demands human judgment at every step.</p>
+            <br>
+            <p>No machine has yet replicated the touch of an experienced spinner — the knowledge embedded in callused fingertips developed over decades.</p>
+          </div>
+          <div style="background:rgba(91,45,142,0.06);border-left:2px solid #5b2d8e;padding:10px 14px;border-radius:0 4px 4px 0;">
+            <div style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:13px;color:#1a0f2e;line-height:1.6;">"Fiber remembers its origin. That memory is what you wear."</div>
+          </div>
+        </div>`
+    }
+  },
+  {
+    id: 'page5',
+    label: 'PAGE 5',
+    left: {
+      type: 'image',
+      content: `
+        <div style="width:100%;height:100%;background:linear-gradient(140deg,#1a0f2e,#3d1f7a,#7c3fbf);display:flex;flex-direction:column;justify-content:flex-end;padding:28px 22px;">
+          <div style="margin-bottom:auto;padding-top:28px;text-align:center;">
+            <div style="font-size:60px;opacity:0.4;">🧵</div>
+          </div>
+          <div>
+            <div style="font-family:'Space Mono',monospace;font-size:7px;letter-spacing:4px;color:rgba(201,169,110,0.6);margin-bottom:8px;">COLLECTION</div>
+            <div style="font-family:'Playfair Display',serif;font-size:24px;font-weight:900;color:#f5f0e8;line-height:1;">Indigo<br>Series</div>
+            <div style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:12px;color:rgba(245,240,232,0.55);margin-top:8px;">Natural plant-dyed<br>heritage linen</div>
+          </div>
+        </div>`
+    },
+    right: {
+      type: 'grid',
+      content: `
+        <div style="width:100%;height:100%;background:#0d0820;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px;">
+          ${[
+            ['#2d1060','🌿','Linen'],
+            ['#1a3a2e','🌸','Silk'],
+            ['#3d2000','🐑','Wool'],
+            ['#0d1a2e','🌾','Hemp']
+          ].map(([bg,icon,name])=>`
+          <div style="background:${bg};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;position:relative;overflow:hidden;">
+            <div style="font-size:24px;opacity:0.6;">${icon}</div>
+            <div style="font-family:'Space Mono',monospace;font-size:7px;letter-spacing:3px;color:rgba(201,169,110,0.7);">${name}</div>
+          </div>`).join('')}
+        </div>`
+    }
+  },
+  {
+    id: 'page6',
+    label: 'PAGE 6',
+    left: {
+      type: 'article',
+      content: `
+        <div style="width:100%;height:100%;background:#f5f0e8;padding:28px 22px;display:flex;flex-direction:column;gap:12px;">
+          <div style="font-family:'Space Mono',monospace;font-size:7px;letter-spacing:4px;color:#5b2d8e;border-bottom:1px solid rgba(91,45,142,0.2);padding-bottom:8px;">SUSTAINABILITY</div>
+          <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#1a0f2e;">The Carbon<br>Equation</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:12px;color:rgba(26,15,46,0.65);line-height:1.9;flex:1;">
+            A kilogram of organic linen sequesters more carbon over its lifecycle than it emits. The math is simple; the practice is anything but.
+            <br><br>
+            Certification chains remain fragmented. Greenwashing flourishes in the gaps. The burden of truth still falls on those with nothing to hide.
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div style="background:rgba(91,45,142,0.06);padding:10px;border-radius:4px;text-align:center;">
+              <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#5b2d8e;">−2.1kg</div>
+              <div style="font-family:'Space Mono',monospace;font-size:6px;letter-spacing:2px;color:rgba(26,15,46,0.4);margin-top:4px;">CO₂ / kg LINEN</div>
+            </div>
+            <div style="background:rgba(201,169,110,0.08);padding:10px;border-radius:4px;text-align:center;">
+              <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#c9a96e;">+8.4kg</div>
+              <div style="font-family:'Space Mono',monospace;font-size:6px;letter-spacing:2px;color:rgba(26,15,46,0.4);margin-top:4px;">CO₂ / kg POLYESTER</div>
+            </div>
+          </div>
+        </div>`
+    },
+    right: {
+      type: 'image',
+      content: `
+        <div style="width:100%;height:100%;position:relative;background:linear-gradient(170deg,#1a2e1a,#2d5040,#1a3a2e);display:flex;align-items:center;justify-content:center;">
+          <div style="text-align:center;padding:20px;">
+            <div style="font-size:64px;opacity:0.3;margin-bottom:16px;">🌍</div>
+            <div style="font-family:'Playfair Display',serif;font-size:32px;font-weight:900;color:#f5f0e8;opacity:0.9;line-height:1;">Plant.<br>Grow.<br>Wear.</div>
+            <div style="width:40px;height:1px;background:#c9a96e;margin:16px auto;"></div>
+            <div style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:12px;color:rgba(245,240,232,0.5);">The complete circle</div>
+          </div>
+        </div>`
+    }
+  },
+  {
+    id: 'page7',
+    label: 'PAGE 7',
+    left: {
+      type: 'image',
+      content: `
+        <div style="width:100%;height:100%;background:linear-gradient(160deg,#2e0a0a,#6b1a1a,#c94040);display:flex;flex-direction:column;justify-content:center;padding:28px 22px;">
+          <div style="font-family:'Space Mono',monospace;font-size:7px;letter-spacing:4px;color:rgba(201,169,110,0.7);margin-bottom:20px;">ARTISAN PROFILE</div>
+          <div style="font-size:50px;margin-bottom:20px;opacity:0.5;">👁</div>
+          <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#f5f0e8;">Maria Santos</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:12px;color:rgba(245,240,232,0.55);margin-top:6px;">Master Weaver · Porto, Portugal<br>32 years at the loom</div>
+        </div>`
+    },
+    right: {
+      type: 'article',
+      content: `
+        <div style="width:100%;height:100%;background:#f5f0e8;padding:28px 22px;display:flex;flex-direction:column;gap:12px;">
+          <div style="font-family:'Space Mono',monospace;font-size:7px;letter-spacing:4px;color:#c9a96e;border-bottom:1px solid rgba(201,169,110,0.2);padding-bottom:8px;">INTERVIEW</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:12px;color:rgba(26,15,46,0.65);line-height:1.9;flex:1;">
+            <p><strong>"Every warp thread is a conversation with the person who spun it. I pick up threads from women I will never meet."</strong></p>
+            <br>
+            <p>Maria's workshop sits above a fish market in Porto's Ribeira district. The sound of the sea mixes with the rhythm of her floor loom.</p>
+            <br>
+            <p>She produces twelve meters of cloth per week. She has refused every offer to scale.</p>
+            <br>
+            <p><em style="color:#c9a96e;">"Scarcity is not a marketing strategy. It is the truth of what handwork costs."</em></p>
+          </div>
+          <div style="font-family:'Space Mono',monospace;font-size:8px;letter-spacing:2px;color:rgba(91,45,142,0.5);">PORTO · RIBEIRA · PORT.</div>
+        </div>`
+    }
+  },
+  {
+    id: 'page8',
+    label: 'PAGE 8',
+    left: {
+      type: 'article',
+      content: `
+        <div style="width:100%;height:100%;background:linear-gradient(160deg,#0d0820,#1a0f2e);padding:28px 22px;display:flex;flex-direction:column;gap:12px;">
+          <div style="font-family:'Space Mono',monospace;font-size:7px;letter-spacing:4px;color:#c9a96e;opacity:0.7;border-bottom:1px solid rgba(201,169,110,0.15);padding-bottom:8px;">STOCKISTS</div>
+          <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:#f5f0e8;margin-bottom:8px;">Where to Find Us</div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:10px;">
+            ${[
+              ['Tokyo','Minami-Aoyama','Sensory Studio'],
+              ['Paris','Le Marais','Atelier Libre'],
+              ['New York','Tribeca','Fiber Union'],
+              ['London','Shoreditch','Natural Yarn Co'],
+              ['Seoul','Ikseon-dong','Slow Thread'],
+            ].map(([city,area,store])=>`
+            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(201,169,110,0.08);padding-bottom:8px;">
+              <div>
+                <div style="font-family:'Cormorant Garamond',serif;font-size:13px;color:#f5f0e8;">${store}</div>
+                <div style="font-family:'Space Mono',monospace;font-size:7px;color:rgba(201,169,110,0.5);letter-spacing:1px;">${area}</div>
+              </div>
+              <div style="font-family:'Space Mono',monospace;font-size:8px;color:rgba(245,240,232,0.3);">${city}</div>
+            </div>`).join('')}
+          </div>
+        </div>`
+    },
+    right: {
+      type: 'image',
+      content: `
+        <div style="width:100%;height:100%;background:linear-gradient(160deg,#1a0f2e,#2d1060,#7c3fbf);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;text-align:center;">
+          <div style="font-size:50px;margin-bottom:20px;opacity:0.4;">✉</div>
+          <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:#f5f0e8;margin-bottom:10px;">Stay Grounded</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:12px;color:rgba(245,240,232,0.55);line-height:1.7;margin-bottom:16px;">Subscribe to our quarterly journal and receive a sample of the season's finest raw fiber.</div>
+          <div style="background:rgba(201,169,110,0.15);border:1px solid rgba(201,169,110,0.3);padding:8px 20px;border-radius:24px;">
+            <div style="font-family:'Space Mono',monospace;font-size:8px;letter-spacing:3px;color:#c9a96e;">SUBSCRIBE</div>
+          </div>
+        </div>`
+    }
+  },
+  {
+    id: 'backcover',
+    label: 'BACK COVER',
+    left: {
+      type: 'image',
+      content: `
+        <div style="width:100%;height:100%;background:linear-gradient(150deg,#0d0820,#1a0f2e);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;">
+          <div style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:14px;color:rgba(245,240,232,0.4);text-align:center;line-height:1.8;">
+            "To wear a natural fiber<br>is to wear the memory<br>of a field, a hand,<br>a season of patience."
+          </div>
+          <div style="width:40px;height:1px;background:rgba(201,169,110,0.3);margin:20px 0;"></div>
+          <div style="font-family:'Space Mono',monospace;font-size:7px;letter-spacing:3px;color:rgba(201,169,110,0.3);">SENSORY FREE FIBER</div>
+        </div>`
+    },
+    right: {
+      type: 'solid',
+      content: `
+        <div style="width:100%;height:100%;background:linear-gradient(145deg,#0d0820,#2d1060);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+          <div style="width:60px;height:60px;border:1px solid rgba(201,169,110,0.3);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;">🌿</div>
+          <div style="font-family:'Playfair Display',serif;font-size:28px;font-weight:900;color:#f5f0e8;letter-spacing:2px;">SENSORY</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:14px;color:rgba(201,169,110,0.7);">Free Fiber Magazine</div>
+          <div style="font-family:'Space Mono',monospace;font-size:8px;letter-spacing:3px;color:rgba(245,240,232,0.25);margin-top:20px;">sensoryfreefiber.com</div>
+        </div>`
+    }
+  }
+];
+
+// ─── State ───────────────────────────────────────────────────────────────────
+let currentPage = 0;
+let isAnimating = false;
+
+// ─── DOM ─────────────────────────────────────────────────────────────────────
+const leftFace = document.getElementById('left-face');
+const rightFace = document.getElementById('right-face');
+const rightPage = document.getElementById('right-page');
+const pageNum = document.getElementById('page-num');
+
+// ─── Render pages ────────────────────────────────────────────────────────────
+function renderPages(idx) {
+  const p = pages[idx];
+  leftFace.innerHTML = p.left.content;
+  rightFace.innerHTML = p.right.content;
+  pageNum.textContent = `${String(idx+1).padStart(2,'0')} / ${pages.length}`;
+  updateNav(idx);
+}
+
+// ─── Nav ─────────────────────────────────────────────────────────────────────
+function buildNav() {
+  const nav = document.getElementById('nav');
+  nav.innerHTML = '';
+  pages.forEach((p, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'nav-btn' + (i === 0 ? ' active' : '');
+    btn.textContent = p.label;
+    btn.addEventListener('click', () => goToPage(i));
+    nav.appendChild(btn);
+  });
+}
+
+function updateNav(idx) {
+  document.querySelectorAll('.nav-btn').forEach((b, i) => {
+    b.classList.toggle('active', i === idx);
+  });
+}
+
+// ─── Page flip ───────────────────────────────────────────────────────────────
+function goToPage(idx) {
+  if (isAnimating || idx === currentPage) return;
+  isAnimating = true;
+
+  const forward = idx > currentPage;
+  spawnDustParticles();
+
+  if (forward) {
+    rightPage.style.transformOrigin = 'left center';
+    rightPage.style.animation = 'none';
+    rightPage.offsetHeight;
+    rightPage.style.animation = 'flip-forward 0.7s cubic-bezier(0.4,0,0.2,1) forwards';
+  } else {
+    rightPage.style.transformOrigin = 'left center';
+    rightPage.style.animation = 'none';
+    rightPage.offsetHeight;
+    rightPage.style.animation = 'flip-backward 0.7s cubic-bezier(0.4,0,0.2,1) forwards';
+  }
+
+  setTimeout(() => {
+    currentPage = idx;
+    renderPages(idx);
+    rightPage.style.animation = 'none';
+    rightPage.style.transform = 'none';
+    isAnimating = false;
+  }, 380);
+}
+
+// ─── Dust particles ───────────────────────────────────────────────────────────
+function spawnDustParticles() {
+  const bookEl = document.getElementById('book');
+  const rect = bookEl.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+
+  for (let i = 0; i < 18; i++) {
+    const d = document.createElement('div');
+    d.className = 'dust-particle';
+    const size = 2 + Math.random() * 4;
+    d.style.cssText = `
+      width:${size}px;height:${size}px;
+      left:${cx + (Math.random()-0.5)*200}px;
+      top:${cy + (Math.random()-0.5)*120}px;
+      background: ${Math.random() > 0.5 ? '#c9a96e' : '#7c3fbf'};
+    `;
+    document.body.appendChild(d);
+    const tx = (Math.random()-0.5)*120;
+    const ty = (Math.random()-0.5)*80 - 40;
+    d.animate([
+      { opacity: 0.8, transform: 'translate(0,0) scale(1)' },
+      { opacity: 0, transform: `translate(${tx}px,${ty}px) scale(0)` }
+    ], { duration: 800 + Math.random()*600, easing: 'ease-out' }).onfinish = () => d.remove();
+  }
+}
+
+// ─── Particle canvas (ambient) ────────────────────────────────────────────────
+const canvas = document.getElementById('particles-canvas');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const ambientParticles = Array.from({length: 60}, () => ({
+  x: Math.random() * canvas.width,
+  y: Math.random() * canvas.height,
+  r: 0.3 + Math.random() * 1.2,
+  vx: (Math.random()-0.5)*0.15,
+  vy: -0.1 - Math.random()*0.2,
+  o: Math.random(),
+  c: Math.random() > 0.5 ? [201,169,110] : [124,63,191]
+}));
+
+function animateAmbient() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ambientParticles.forEach(p => {
+    p.x += p.vx; p.y += p.vy;
+    p.o = Math.max(0, p.o - 0.002);
+    if (p.y < -10 || p.o <= 0) {
+      p.x = Math.random()*canvas.width;
+      p.y = canvas.height + 10;
+      p.o = 0.3 + Math.random()*0.5;
+    }
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(${p.c[0]},${p.c[1]},${p.c[2]},${p.o})`;
+    ctx.fill();
+  });
+  requestAnimationFrame(animateAmbient);
+}
+animateAmbient();
+
+window.addEventListener('resize', () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+});
+
+// ─── Custom cursor ────────────────────────────────────────────────────────────
+const cursor = document.getElementById('cursor');
+const ring = document.getElementById('cursor-ring');
+let mx = 0, my = 0, rx = 0, ry = 0;
+
+document.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  cursor.style.left = mx - 6 + 'px';
+  cursor.style.top = my - 6 + 'px';
+});
+
+function animateCursor() {
+  rx += (mx - rx) * 0.12;
+  ry += (my - ry) * 0.12;
+  ring.style.left = rx + 'px';
+  ring.style.top = ry + 'px';
+  requestAnimationFrame(animateCursor);
+}
+animateCursor();
+
+document.addEventListener('mousedown', () => cursor.style.transform = 'scale(1.8)');
+document.addEventListener('mouseup', () => cursor.style.transform = 'scale(1)');
+
+// ─── Keyboard / scroll / buttons ─────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') goToPage(Math.min(currentPage+1, pages.length-1));
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') goToPage(Math.max(currentPage-1, 0));
+});
+
+let lastWheel = 0;
+document.addEventListener('wheel', e => {
+  const now = Date.now();
+  if (now - lastWheel < 600) return;
+  lastWheel = now;
+  if (e.deltaY > 0) goToPage(Math.min(currentPage+1, pages.length-1));
+  else goToPage(Math.max(currentPage-1, 0));
+});
+
+document.getElementById('btn-next').addEventListener('click', () => goToPage(Math.min(currentPage+1, pages.length-1)));
+document.getElementById('btn-prev').addEventListener('click', () => goToPage(Math.max(currentPage-1, 0)));
+
+// ─── Touch swipe ─────────────────────────────────────────────────────────────
+let touchStartX = 0;
+document.addEventListener('touchstart', e => touchStartX = e.touches[0].clientX, {passive:true});
+document.addEventListener('touchend', e => {
+  const diff = touchStartX - e.changedTouches[0].clientX;
+  if (Math.abs(diff) > 50) {
+    if (diff > 0) goToPage(Math.min(currentPage+1, pages.length-1));
+    else goToPage(Math.max(currentPage-1, 0));
+  }
+}, {passive:true});
+
+// ─── 3D parallax on mouse ─────────────────────────────────────────────────────
+const book = document.getElementById('book');
+document.addEventListener('mousemove', e => {
+  const cx = window.innerWidth / 2;
+  const cy = window.innerHeight / 2;
+  const dx = (e.clientX - cx) / cx;
+  const dy = (e.clientY - cy) / cy;
+  book.style.transform = `rotateX(${10 - dy*6}deg) rotateY(${-8 + dx*6}deg) rotateZ(${1 + dx*0.5}deg)`;
+});
+
+// ─── Loader ───────────────────────────────────────────────────────────────────
+const loader = document.getElementById('loader');
+const bar = document.getElementById('loader-bar');
+
+buildNav();
+renderPages(0);
+
+setTimeout(() => { bar.style.width = '100%'; }, 100);
+setTimeout(() => {
+  loader.style.opacity = '0';
+  loader.style.pointerEvents = 'none';
+  book.classList.add('book-animate-in');
+  setTimeout(() => loader.remove(), 800);
+}, 1800);
+</script>
+</body>
+</html>
